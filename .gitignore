@@ -173,9 +173,57 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Cursor  
-#  Cursor is an AI-powered code editor.`.cursorignore` specifies files/directories to 
+# Cursor
+#  Cursor is an AI-powered code editor.`.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# =====================================================================
+# Проект tvsalebot — обязательные исключения (см. architecture/00-правила-проекта.md П7)
+# =====================================================================
+
+# Секреты и локальные окружения
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+credentials.json
+.mcp.json
+
+# Локальные настройки Claude Code (user-specific overrides)
+.claude/settings.local.json
+
+# Пользовательские файлы / выгрузки / хранилище (появятся после MVP, но защищаем заранее)
+/uploads
+/storage
+
+# Медиа-артефакты (скриншоты диалогов, видео, фото тестеров — ПДн)
+# Разрешённое исключение — картинки лендоса в landing/assets/
+*.mp4
+*.mov
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+!landing/assets/**
+screenshots/private/
+
+# Приватный бизнес-контекст (клиент, цены КП, расчёт себестоимости)
+# — хранится вне репо в freelance/.business/, в этот проект не копируется
+.business/
+kp/
+CP/
+
+# Служебное macOS
+.DS_Store
+
+# Системные логи и Redis-дампы
+*.log
+dumps/
+dump.rdb
+appendonly.aof
