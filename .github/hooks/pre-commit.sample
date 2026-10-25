@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pre-commit guard for tvsalebot.
+# 1) Heuristic scan of staged index blobs for secrets (`.starter/check_secrets.py`).
+# 2) Block commits that would introduce ignored private paths
+#    (.env, .business/, kp/, cp/, *.pem, *.key, uploads/, storage/, screenshots/private/).
+#
+# Install:  cp .github/hooks/pre-commit.sample .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# См. architecture/00-правила-проекта.md § П7.
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel) || exit 2
+cd "$ROOT"
+
+# Pick a real Python 3 interpreter. On Windows, `python3`/`python` under
+# WindowsApps\ is often a Microsoft Store launcher (exits 49, nothing runs),
+# so try `py -3` first — it is Python Launcher for Windows (shipped with
+# the real CPython installer).
+PY=""
+for cand in "py -3" python3 python; do
+  if $cand --version >/dev/null 2>&1; then PY="$cand"; break; fi
+done
+if [ -z "$PY" ]; then
+  echo "pre-commit: no working Python 3 interpreter (tried: py -3, python3, python)" >&2
+  exit 2
+fi
+
+$PY "$ROOT/.starter/check_secrets.py" --staged

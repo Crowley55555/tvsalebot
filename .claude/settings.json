@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf *)",
+      "Bash(rm -rf ./*)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
+      "Bash(curl *|sh)",
+      "Bash(curl *|bash)",
+      "Bash(wget *|sh)",
+      "Bash(wget *|bash)",
+      "Bash(export *&& curl *)",
+      "Bash(export *;curl *)",
+
+      "Bash(git push *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fd *)",
+      "Bash(git clean -f *)",
+      "Bash(git checkout .)",
+      "Bash(git restore .)",
+      "Bash(git commit --amend *)",
+      "Bash(git config *)",
+      "Bash(git rebase -i *)",
+
+      "Bash(docker system prune *)",
+      "Bash(docker volume prune *)",
+      "Bash(systemctl *)",
+      "Bash(shutdown *)",
+      "Bash(reboot *)",
+
+      "Bash(redis-cli flushall*)",
+      "Bash(redis-cli flushdb*)",
+
+      "Bash(pip install *)",
+      "Bash(pip3 install *)",
+      "Bash(pip uninstall *)",
+      "Bash(uv add *)",
+      "Bash(uv remove *)",
+      "Bash(poetry add *)",
+      "Bash(poetry remove *)",
+
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.prod)",
+      "Read(./.env.production)",
+      "Read(./**/.env)",
+      "Read(./**/.env.local)",
+      "Read(./**/.env.*.local)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/credentials.json)",
+      "Read(./.mcp.json)",
+      "Read(./screenshots/private/**)",
+
+      "Write(./.env)",
+      "Write(./.env.local)",
+      "Write(./.env.*.local)",
+      "Write(./.env.prod)",
+      "Write(./.env.production)",
+      "Edit(./.env)",
+      "Edit(./.env.local)",
+      "Edit(./.env.*.local)",
+      "Edit(./.env.prod)",
+      "Edit(./.env.production)"
+    ],
+    "allow": [
+      "Read(./.env.example)",
+      "Edit(./.env.example)",
+      "Write(./.env.example)",
+      "Bash(python3 -m scripts.*)",
+      "Bash(python -m scripts.*)",
+      "Bash(py -3 -m scripts.*)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(pytest *)",
+      "Bash(uvicorn *)",
+      "Bash(python -m uvicorn *)",
+      "Bash(docker compose -f docker-compose.dev.yml *)",
+      "Bash(docker-compose -f docker-compose.dev.yml *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)"
+    ]
+  },
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.starter/post_edit.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
