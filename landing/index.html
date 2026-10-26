@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI-продавец Samsung TV для вашего магазина</title>
+  <meta name="description" content="Telegram-бот, который консультирует покупателей Samsung TV как опытный продавец. 24/7, без зарплаты и отпусков. Готов к запуску под ваш магазин за 2–4 недели.">
+  <meta name="theme-color" content="#1b2440" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1222" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="AI-продавец Samsung TV для вашего магазина">
+  <meta property="og:description" content="Telegram-бот, который консультирует покупателей Samsung TV как опытный продавец. 24/7, без зарплаты и отпусков.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --surface-alt: #f3f5f8;
+      --border: #e4e8ef;
+      --fg: #1b2440;
+      --fg-muted: #5c6680;
+      --accent: #3f5fdc;
+      --accent-hover: #324dbb;
+      --accent-fg: #ffffff;
+      --radius: 14px;
+      --shadow: 0 1px 2px rgba(27, 36, 64, 0.05), 0 8px 24px rgba(27, 36, 64, 0.06);
+      --maxw: 1040px;
+      --gutter: clamp(16px, 4vw, 32px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1222;
+        --surface: #141c33;
+        --surface-alt: #1a2340;
+        --border: #273155;
+        --fg: #e8ecf7;
+        --fg-muted: #99a2bf;
+        --accent: #6683f0;
+        --accent-hover: #8ca2f4;
+        --accent-fg: #0b1222;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img { max-width: 100%; height: auto; display: block; }
+
+    .wrap {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding-left: var(--gutter);
+      padding-right: var(--gutter);
+    }
+
+    /* Header / hero */
+    header.hero {
+      padding: clamp(48px, 10vw, 96px) 0 clamp(32px, 6vw, 56px);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--fg-muted);
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+    .brand-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+    h1 {
+      font-size: clamp(32px, 5.5vw, 54px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin: 0 0 20px;
+      font-weight: 700;
+    }
+    h1 .accent {
+      background: linear-gradient(100deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #b76bff));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .sub {
+      font-size: clamp(17px, 2vw, 20px);
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin: 0 0 32px;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 16px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+    .btn:hover { text-decoration: none; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-fg);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface-alt); }
+
+    /* Sections */
+    section {
+      padding: clamp(32px, 6vw, 64px) 0;
+    }
+    section + section { border-top: 1px solid var(--border); }
+    h2 {
+      font-size: clamp(24px, 3.5vw, 32px);
+      line-height: 1.2;
+      letter-spacing: -0.015em;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    .section-lead {
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin: 0 0 32px;
+    }
+
+    /* Dialog screenshots */
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .screen {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      aspect-ratio: 9 / 16;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    .screen-head {
+      font-size: 12px;
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .screen-head::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+    }
+    .screen-body { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
+    .msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .msg-in { background: var(--surface-alt); color: var(--fg); border-top-left-radius: 4px; }
+    .msg-out { background: var(--accent); color: var(--accent-fg); margin-left: auto; border-top-right-radius: 4px; }
+    .screen-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--fg-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* Benefits */
+    .benefits {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .benefit {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 20px 22px;
+    }
+    .benefit h3 {
+      font-size: 17px;
+      margin: 0 0 8px;
+      font-weight: 600;
+    }
+    .benefit p {
+      margin: 0;
+      color: var(--fg-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .benefit .ico {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+
+    /* How it works */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      counter-reset: step;
+    }
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      position: relative;
+    }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      top: -14px;
+      left: 20px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-fg);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .step h3 { margin: 12px 0 6px; font-size: 17px; font-weight: 600; }
+    .step p { margin: 0; color: var(--fg-muted); font-size: 15px; }
+
+    /* Timeline */
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .tl {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .tl .tag {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--fg-muted);
+      background: var(--surface-alt);
+      border-radius: 999px;
+      padding: 3px 10px;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+    .tl h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .tl p { margin: 0; color: var(--fg-muted); font-size: 15px; }
+
+    /* Contact */
+    .contact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(28px, 5vw, 44px);
+      display: grid;
+      gap: 20px;
+      align-items: center;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .contact { grid-template-columns: 1.4fr 1fr; }
+    }
+    .contact h2 { margin: 0 0 8px; }
+    .contact p { margin: 0; color: var(--fg-muted); }
+    .contact-cta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0 48px;
+      color: var(--fg-muted);
+      font-size: 14px;
+    }
+    footer .foot-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    footer a { color: var(--fg-muted); }
+    footer a:hover { color: var(--fg); }
+
+    /* Accessibility */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        AI-консультант по Samsung TV
+      </div>
+      <h1>
+        AI-продавец <span class="accent">Samsung TV</span><br>
+        в вашем магазине
+      </h1>
+      <p class="sub">
+        Телеграм-бот, который консультирует покупателя как опытный продавец:
+        задаёт правильные вопросы, рекомендует по задаче, не впаривает.
+        Работает 24/7, не берёт отпуск и не увольняется.
+      </p>
+      <div class="cta-row">
+        <!-- TODO: заменить href на реальную ссылку на бота перед деплоем -->
+        <a class="btn btn-primary" href="https://t.me/your_bot" target="_blank" rel="noopener">
+          Попробовать бота &nbsp;→
+        </a>
+        <a class="btn btn-ghost" href="#how">Как это работает</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+  <section id="demo">
+    <div class="wrap">
+      <h2>Как это выглядит для покупателя</h2>
+      <p class="section-lead">
+        Пять эталонных сценариев: подбор под гостиную, ТВ под PS5, спор OLED vs QLED,
+        честный ответ про Dolby Vision и бюджетный выбор на кухню.
+      </p>
+      <div class="screens">
+        <!-- Заглушки под скриншоты: при появлении PNG заменить на <img src="assets/dialog-N.png" alt="..."> -->
+        <article class="screen">
+          <div class="screen-head">Samsung TV консультант</div>
+          <div class="screen-body">
+            <div class="msg msg-in">Привет! Расскажи, зачем тебе телевизор?</div>
+            <div class="msg msg-out">Нужен в гостиную, смотрим кино</div>
+            <div class="msg msg-in">А комната светлая или тёмная?</div>
+          </div>
+          <div class="screen-placeholder">dialog-1 (скриншот)</div>
+        </article>
+        <article class="screen">
+          <div class="screen-head">Samsung TV консультант</div>
+          <div class="screen-body">
+            <div class="msg msg-out">У меня PS5, подбери ТВ</div>
+            <div class="msg msg-in">Важен 4K@120 Гц и VRR? Это сузит до Neo QLED и OLED.</div>
+            <div class="msg msg-out">Да, хочу максимум от консоли</div>
+          </div>
+          <div class="screen-placeholder">dialog-2 (скриншот)</div>
+        </article>
+        <article class="screen">
+          <div class="screen-head">Samsung TV консультант</div>
+          <div class="screen-body">
+            <div class="msg msg-out">OLED vs QLED, что лучше?</div>
+            <div class="msg msg-in">Через сценарий, не через технологию.<br>Тёмная + кино → OLED. Светлая + спорт → Neo QLED.</div>
+          </div>
+          <div class="screen-placeholder">dialog-3 (скриншот)</div>
+        </article>
+        <article class="screen">
+          <div class="screen-head">Samsung TV консультант</div>
+          <div class="screen-body">
+            <div class="msg msg-out">Почему Samsung без Dolby Vision?</div>
+            <div class="msg msg-in">Samsung принципиально ставит на HDR10+. Если DV критичен — честно: смотрите LG C или G.</div>
+          </div>
+          <div class="screen-placeholder">dialog-4 (скриншот)</div>
+        </article>
+        <article class="screen">
+          <div class="screen-head">Samsung TV консультант</div>
+          <div class="screen-body">
+            <div class="msg msg-out">Что взять на кухню до 50 тыс.?</div>
+            <div class="msg msg-in">Crystal UHD DU7000 — это НЕ QLED, 60 Гц, базовый HDR. Для кухни и фона — правильный выбор.</div>
+          </div>
+          <div class="screen-placeholder">dialog-5 (скриншот)</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="value">
+    <div class="wrap">
+      <h2>Что получает магазин</h2>
+      <p class="section-lead">
+        Не чат-бот с кнопками, а продавец, которому не стыдно передать клиента.
+      </p>
+      <div class="benefits">
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">1</div>
+          <h3>Знает ваш каталог Samsung</h3>
+          <p>Знает именно ваш ассортимент — 12–14 моделей, которые реально продаются. Не называет вслепую то, чего у вас нет на складе.</p>
+        </div>
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">2</div>
+          <h3>Задаёт правильные вопросы</h3>
+          <p>Сценарий, свет в комнате, расстояние до дивана, бюджет, консоль. Не вываливает топ-5 сразу — ведёт по воронке.</p>
+        </div>
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">3</div>
+          <h3>Помнит контекст диалога</h3>
+          <p>Покупатель не повторяет бюджет и предпочтения. История живёт между сессиями, рестарт сервиса её не обнуляет.</p>
+        </div>
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">4</div>
+          <h3>Передаёт горячие лиды</h3>
+          <p>Готовый лид с профилем покупателя и ссылкой на диалог уходит менеджеру — в Telegram, CRM или на почту.</p>
+        </div>
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">5</div>
+          <h3>Не впаривает лишнего</h3>
+          <p>Для кухни рекомендует Crystal UHD, а не Q60. Для PS5 отсекает модели с HDMI 2.0. Доверие покупателя — главный актив.</p>
+        </div>
+        <div class="benefit">
+          <div class="ico" aria-hidden="true">6</div>
+          <h3>Соответствует ФЗ-152</h3>
+          <p>Согласие на обработку ПДн на старте, команды <code>/stop</code> и <code>/удалить_данные</code> удаляют всё одним запросом. Обработка данных на серверах в РФ.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>Как это работает за 60 секунд</h2>
+      <p class="section-lead">
+        Один канал, одна точка входа, никаких приложений для покупателя.
+      </p>
+      <div class="steps">
+        <div class="step">
+          <h3>Покупатель пишет боту</h3>
+          <p>Переходит из вашего профиля, QR-кода в магазине или рекламы. Пишет свободным текстом «нужен телек в гостиную».</p>
+        </div>
+        <div class="step">
+          <h3>Бот ведёт по воронке</h3>
+          <p>5–10 минут диалога. На выходе — 2–3 модели с объяснением, почему именно они, и короткий блок «как безопасно принять ТВ».</p>
+        </div>
+        <div class="step">
+          <h3>Менеджер получает лид</h3>
+          <p>Профиль, бюджет, выбранные модели и ссылка на диалог. Остаётся только позвонить и закрыть покупку.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="timeline">
+    <div class="wrap">
+      <h2>Сроки и формат</h2>
+      <p class="section-lead">
+        Без длинных релиз-циклов и дорогих ERP-интеграций. Запуск на уровне демо — за неделю.
+      </p>
+      <div class="timeline">
+        <div class="tl">
+          <span class="tag">Неделя 1–2</span>
+          <h3>MVP под ваш магазин</h3>
+          <p>Промпт настраивается под ваш ассортимент и тон. Запуск в вашем Telegram-боте.</p>
+        </div>
+        <div class="tl">
+          <span class="tag">Неделя 3–4</span>
+          <h3>Пилот на реальных покупателях</h3>
+          <p>Собираем фидбек, допиливаем воронку, подключаем передачу лидов менеджеру.</p>
+        </div>
+        <div class="tl">
+          <span class="tag">После пилота</span>
+          <h3>Передача и поддержка</h3>
+          <p>Исходный код, инструкция запуска, 1 месяц сопровождения. Расширения — WhatsApp, веб-виджет, CRM — отдельным этапом.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap">
+      <div class="contact">
+        <div>
+          <h2>Готовы попробовать?</h2>
+          <p>Напишите в Telegram — пришлю ссылку на демо-бота и ответы на вопросы по подключению в ваш магазин. Коммерческое предложение — после короткого разговора.</p>
+        </div>
+        <div class="contact-cta">
+          <!-- TODO: заменить @your-telegram на реальный ник перед деплоем -->
+          <a class="btn btn-primary" href="https://t.me/your-telegram" target="_blank" rel="noopener">
+            Написать в Telegram
+          </a>
+          <!-- TODO: заменить mailto на реальный email перед деплоем -->
+          <a class="btn btn-ghost" href="mailto:your-email@example.com">
+            Написать на почту
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-row">
+        <div>AI-консультант по Samsung TV — демо, не аффилирован с Samsung Electronics.</div>
+        <div>
+          <a href="privacy.html">Политика обработки ПДн</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
