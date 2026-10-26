@@ -227,3 +227,6 @@ CP/
 dumps/
 dump.rdb
 appendonly.aof
+
+# прогоны QA-сценариев (F19) — локальные артефакты scripts/test_scenarios.py
+transcripts/
