@@ -42,7 +42,7 @@ class GigaChatClient:
         history: list[Message],
         *,
         max_tokens: int = 1024,
-        timeout_s: float = 10.0,
+        timeout_s: float = 30.0,
     ) -> ChatResult:
         messages: list[Messages] = [
             Messages(role=MessagesRole.SYSTEM, content=system_prompt)
