@@ -43,6 +43,11 @@ class RedisContextStore:
     async def get_history_length(self, session_key: str) -> int:
         return await self._r.llen(dialog_history_key(session_key))
 
+    async def get_history(self, session_key: str, limit: int = 30) -> list[Message]:
+        key = dialog_history_key(session_key)
+        raw: list[str] = await self._r.lrange(key, -limit, -1)
+        return [Message.model_validate_json(item) for item in raw]
+
     async def mark_update_seen(self, update_id: int, ttl_s: int = 60) -> bool:
         """Атомарный SETNX: True — первый раз, False — дубликат."""
         key = update_seen_key(update_id)

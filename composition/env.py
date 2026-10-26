@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr
@@ -22,6 +23,14 @@ class AppSettings(BaseSettings):
 
     CORE_API_URL: str = "http://127.0.0.1:8000"
     CORE_API_BEARER_TOKEN: SecretStr | None = None
+
+    LLM_PROVIDER: Literal["gigachat"] = "gigachat"
+    LLM_MODEL: str = "GigaChat-2-Pro"
+    GIGACHAT_API_KEY: SecretStr | None = None
+    GIGACHAT_SCOPE: str = "GIGACHAT_API_PERS"
+
+    PROMPTS_DIR: Path = Path("prompts")
+    MAX_HISTORY_MESSAGES: int = 30
 
 
 @lru_cache

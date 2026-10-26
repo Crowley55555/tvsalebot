@@ -1,10 +1,19 @@
 from domain import Message
-from domain.ports import ContextStore
+from domain.ports import ContextStore, LLMClient
 
 
 class DialogService:
-    def __init__(self, store: ContextStore) -> None:
+    def __init__(
+        self,
+        store: ContextStore,
+        llm: LLMClient,
+        system_prompt: str,
+        max_history_messages: int = 30,
+    ) -> None:
         self._store = store
+        self._llm = llm
+        self._system_prompt = system_prompt
+        self._max_history = max_history_messages
 
     async def handle_user_message(
         self,
@@ -22,10 +31,14 @@ class DialogService:
         await self._store.append_message(
             session_key, Message(role="user", text=text)
         )
-        n_user = await self._store.get_history_length(session_key)
-        # история чередуется user/assistant: LLEN=1 -> 1-я, LLEN=3 -> 2-я, ...
-        reply_number = (n_user + 1) // 2
-        reply_text = f"видел, это твоя {reply_number}-я реплика"
+        history = await self._store.get_history(session_key, limit=self._max_history)
+
+        result = await self._llm.chat(
+            system_prompt=self._system_prompt,
+            history=history,
+        )
+        reply_text = result.text
+
         await self._store.append_message(
             session_key, Message(role="assistant", text=reply_text)
         )
