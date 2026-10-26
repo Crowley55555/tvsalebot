@@ -4,16 +4,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from api.deps import get_consent_service, get_dialog_service
+from api.deps import get_consent_service, get_deletion_service, get_dialog_service
 from api.schemas import (
     ChatRequest,
     ChatResponse,
     ConsentGrantRequest,
     ConsentGrantResponse,
     ConsentRequiredResponse,
+    GdprStopRequest,
+    GdprStopResponse,
 )
 from domain import ConsentRequired
 from features.consent import ConsentService
+from features.deletion import DeletionService
 from features.dialog import DialogService
 
 log = logging.getLogger("api.routes")
@@ -70,3 +73,16 @@ async def consent_grant(
 ) -> ConsentGrantResponse:
     await consent.grant(body.telegram_id)
     return ConsentGrantResponse(granted=True, policy_version=consent.policy_version)
+
+
+@router.post("/gdpr/stop", response_model=GdprStopResponse)
+async def gdpr_stop(
+    body: GdprStopRequest,
+    deletion: Annotated[DeletionService, Depends(get_deletion_service)],
+) -> GdprStopResponse:
+    result = await deletion.delete_user_data(body.telegram_id, body.reason)
+    return GdprStopResponse(
+        deleted=True,
+        deleted_keys=result.deleted_keys,
+        reason=result.reason,
+    )

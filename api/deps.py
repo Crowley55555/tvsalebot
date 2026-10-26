@@ -2,6 +2,7 @@ from fastapi import Request
 
 from composition.container import Container
 from features.consent import ConsentService
+from features.deletion import DeletionService
 from features.dialog import DialogService
 
 
@@ -16,3 +17,7 @@ def get_dialog_service(request: Request) -> DialogService:
 
 def get_consent_service(request: Request) -> ConsentService:
     return get_container(request).consent_service
+
+
+def get_deletion_service(request: Request) -> DeletionService:
+    return get_container(request).deletion_service

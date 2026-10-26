@@ -82,5 +82,18 @@ class CoreAPIClient:
             raise CoreAPIError(502, "bad_response_shape")
         return version
 
+    async def gdpr_stop(self, telegram_id: int, reason: str = "user_stop") -> int:
+        try:
+            response = await self._client.post(
+                "/gdpr/stop",
+                json={"telegram_id": telegram_id, "reason": reason},
+            )
+        except httpx.HTTPError as exc:
+            raise CoreAPIError(502, "transport_error") from exc
+        if response.status_code >= 400:
+            raise CoreAPIError(response.status_code, "stop_failed")
+        data = response.json()
+        return int(data.get("deleted_keys", 0))
+
     async def aclose(self) -> None:
         await self._client.aclose()

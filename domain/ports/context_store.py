@@ -1,6 +1,8 @@
-from typing import Protocol
+from typing import Literal, Protocol
 
 from domain.entities import Message
+
+DeletionReason = Literal["user_stop", "user_delete", "retention", "admin"]
 
 
 class ContextStore(Protocol):
@@ -13,19 +15,19 @@ class ContextStore(Protocol):
         ...
 
     async def mark_update_seen(self, update_id: int, ttl_s: int = 60) -> bool:
-        """Вернуть True, если update_id увиден впервые; False — дубликат.
-
-        Нужен для дедупа повторных Telegram update_id (long-poll retry).
-        """
+        """Вернуть True, если update_id увиден впервые; False — дубликат."""
         ...
 
-    async def grant_consent(self, telegram_id: int, policy_version: str) -> None:
-        """Записать факт согласия пользователя с политикой ПДн.
+    async def grant_consent(self, telegram_id: int, policy_version: str) -> None: ...
 
-        Повторный вызов идемпотентен — перезаписывает той же версией.
-        """
+    async def has_consent(self, telegram_id: int) -> bool: ...
+
+    async def delete_user_data(self, telegram_id: int) -> int:
+        """Удалить все ПДн пользователя. Вернуть число удалённых ключей."""
         ...
 
-    async def has_consent(self, telegram_id: int) -> bool:
-        """Проверить, есть ли у пользователя действующее согласие."""
+    async def append_deletion_log(
+        self, telegram_id: int, reason: DeletionReason
+    ) -> None:
+        """Записать факт удаления (user_id + timestamp + reason), без содержимого."""
         ...

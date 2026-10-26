@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -27,6 +29,17 @@ class ConsentRequiredResponse(BaseModel):
     error: str = "consent_required"
     user_message: str
     policy_url: str
+
+
+class GdprStopRequest(BaseModel):
+    telegram_id: int
+    reason: Literal["user_stop", "user_delete", "retention", "admin"] = "user_stop"
+
+
+class GdprStopResponse(BaseModel):
+    deleted: bool
+    deleted_keys: int
+    reason: str
 
 
 class ErrorPayload(BaseModel):

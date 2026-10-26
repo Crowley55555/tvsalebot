@@ -29,3 +29,6 @@ def consent_key(telegram_id: int) -> str:
     Формат зафиксирован в plans/2026-10-26-f7-consent-gate.md.
     """
     return f"consent:{telegram_id}"
+
+
+DELETION_LOG_KEY = "deletion_log"

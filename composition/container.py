@@ -4,6 +4,7 @@ from pathlib import Path
 from composition.env import AppSettings
 from domain.ports import ContextStore, LLMClient
 from features.consent import ConsentService
+from features.deletion import DeletionService
 from features.dialog import DialogService
 from infrastructure.context import build_context_store
 from infrastructure.llm import build_llm_client
@@ -20,6 +21,7 @@ class Container:
     context_store: ContextStore
     llm_client: LLMClient
     consent_service: ConsentService
+    deletion_service: DeletionService
     dialog_service: DialogService
 
     async def aclose(self) -> None:
@@ -35,6 +37,7 @@ def build_container(settings: AppSettings) -> Container:
     consent_service = ConsentService(
         store=context_store, policy_version=settings.POLICY_VERSION
     )
+    deletion_service = DeletionService(store=context_store)
     system_prompt = _load_system_prompt(settings.PROMPTS_DIR)
     dialog_service = DialogService(
         store=context_store,
@@ -48,5 +51,6 @@ def build_container(settings: AppSettings) -> Container:
         context_store=context_store,
         llm_client=llm_client,
         consent_service=consent_service,
+        deletion_service=deletion_service,
         dialog_service=dialog_service,
     )

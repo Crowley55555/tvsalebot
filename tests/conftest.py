@@ -4,9 +4,10 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from api.deps import get_consent_service, get_dialog_service
+from api.deps import get_consent_service, get_deletion_service, get_dialog_service
 from api.main import app
 from features.consent import ConsentService
+from features.deletion import DeletionService
 from features.dialog import DialogService
 from infrastructure.context import InMemoryContextStore
 from infrastructure.llm.fake import FakeLLMClient
@@ -32,6 +33,11 @@ def consent_service(store: InMemoryContextStore) -> ConsentService:
 
 
 @pytest.fixture
+def deletion_service(store: InMemoryContextStore) -> DeletionService:
+    return DeletionService(store=store)
+
+
+@pytest.fixture
 def dialog_service(
     store: InMemoryContextStore,
     fake_llm: FakeLLMClient,
@@ -50,12 +56,14 @@ def dialog_service(
 def client(
     dialog_service: DialogService,
     consent_service: ConsentService,
+    deletion_service: DeletionService,
 ) -> Iterator[TestClient]:
     app.state.container = types.SimpleNamespace(
         settings=types.SimpleNamespace(PRIVACY_POLICY_URL=TEST_POLICY_URL),
     )
     app.dependency_overrides[get_dialog_service] = lambda: dialog_service
     app.dependency_overrides[get_consent_service] = lambda: consent_service
+    app.dependency_overrides[get_deletion_service] = lambda: deletion_service
     try:
         yield TestClient(app)
     finally:
