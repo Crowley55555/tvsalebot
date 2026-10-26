@@ -1,5 +1,6 @@
 import types
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,10 +12,68 @@ from features.deletion import DeletionService
 from features.dialog import DialogService
 from infrastructure.context import InMemoryContextStore
 from infrastructure.llm.fake import FakeLLMClient
+from infrastructure.tv_catalog import MarkdownTVCatalog
 
 TEST_SYSTEM_PROMPT = "You are a test consultant for Samsung TVs."
 TEST_POLICY_VERSION = "test-v1"
 TEST_POLICY_URL = "https://test.example/privacy"
+
+_TEST_CATALOG_MD = """# Тестовый каталог
+
+```toml
+[[models]]
+code = "TEST-A"
+trade_name = "Test Alpha"
+tv_class = "neo_qled"
+diagonals_inches = [55, 65]
+refresh_hz = 120
+brightness_nits_min = 1000
+brightness_nits_max = 1500
+hdmi_version = "2.1"
+hdmi_ports = 4
+backlight = "mini_led"
+price_min = 100000
+price_max = 200000
+fits_short = "Тест-модель А"
+honest_caveats = "Нет Dolby Vision"
+
+[[models]]
+code = "TEST-B"
+trade_name = "Test Beta"
+tv_class = "oled"
+diagonals_inches = [55, 65, 77]
+refresh_hz = 144
+brightness_nits_min = 800
+brightness_nits_max = 1200
+hdmi_version = "2.1"
+hdmi_ports = 4
+backlight = "oled"
+price_min = 150000
+price_max = 300000
+fits_short = "Тест-модель Б"
+honest_caveats = "Нет Dolby Vision"
+```
+
+## Test Alpha
+
+Описание A.
+
+## Test Beta
+
+Описание B.
+"""
+
+
+@pytest.fixture
+def catalog_file(tmp_path: Path) -> Path:
+    path = tmp_path / "models.md"
+    path.write_text(_TEST_CATALOG_MD, encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def catalog(catalog_file: Path) -> MarkdownTVCatalog:
+    return MarkdownTVCatalog(catalog_file)
 
 
 @pytest.fixture
@@ -42,11 +101,13 @@ def dialog_service(
     store: InMemoryContextStore,
     fake_llm: FakeLLMClient,
     consent_service: ConsentService,
+    catalog: MarkdownTVCatalog,
 ) -> DialogService:
     return DialogService(
         store=store,
         llm=fake_llm,
         consent=consent_service,
+        catalog=catalog,
         system_prompt=TEST_SYSTEM_PROMPT,
         max_history_messages=30,
     )

@@ -1,4 +1,12 @@
-from domain.entities import ChatResult, Message, MessageRole
+from domain.entities import Backlight, ChatResult, Message, MessageRole, TVClass, TVModel
 from domain.errors import ConsentRequired
 
-__all__ = ["ChatResult", "ConsentRequired", "Message", "MessageRole"]
+__all__ = [
+    "Backlight",
+    "ChatResult",
+    "ConsentRequired",
+    "Message",
+    "MessageRole",
+    "TVClass",
+    "TVModel",
+]

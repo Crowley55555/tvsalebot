@@ -1,5 +1,5 @@
 from domain import ConsentRequired, Message
-from domain.ports import ContextStore, LLMClient
+from domain.ports import ContextStore, LLMClient, TVCatalog
 from features.consent import ConsentService
 
 
@@ -9,12 +9,14 @@ class DialogService:
         store: ContextStore,
         llm: LLMClient,
         consent: ConsentService,
+        catalog: TVCatalog,
         system_prompt: str,
         max_history_messages: int = 30,
     ) -> None:
         self._store = store
         self._llm = llm
         self._consent = consent
+        self._catalog = catalog
         self._system_prompt = system_prompt
         self._max_history = max_history_messages
 
@@ -39,8 +41,10 @@ class DialogService:
         )
         history = await self._store.get_history(session_key, limit=self._max_history)
 
+        catalog_block = await self._catalog.as_prompt_block()
+        full_system = f"{self._system_prompt}\n\n{catalog_block}"
         result = await self._llm.chat(
-            system_prompt=self._system_prompt,
+            system_prompt=full_system,
             history=history,
         )
         reply_text = result.text

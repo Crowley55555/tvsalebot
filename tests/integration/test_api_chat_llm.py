@@ -80,3 +80,19 @@ def test_separate_users_have_separate_histories(
     second_user1 = fake_llm.calls[2]
     assert [m.text for m in first_user1["history"]] == ["а"]
     assert [m.text for m in second_user1["history"]] == ["а", "test-reply", "а2"]
+
+
+def test_catalog_is_included_in_system_prompt(
+    client: TestClient, fake_llm: FakeLLMClient
+) -> None:
+    _grant(client, 100)
+
+    client.post("/chat", json={"telegram_id": 100, "text": "посоветуй тв"})
+
+    assert len(fake_llm.calls) == 1
+    system_prompt = fake_llm.calls[0]["system_prompt"]
+    # базовый system-prompt остаётся
+    assert "Samsung" in system_prompt
+    # и к нему прилеплен тестовый каталог
+    assert "TEST-A" in system_prompt
+    assert "Test Alpha" in system_prompt
