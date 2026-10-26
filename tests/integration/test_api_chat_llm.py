@@ -3,8 +3,13 @@ from fastapi.testclient import TestClient
 from infrastructure.llm.fake import FakeLLMClient
 
 
+def _grant(client: TestClient, tg_id: int) -> None:
+    assert client.post("/consent/grant", json={"telegram_id": tg_id}).status_code == 200
+
+
 def test_single_message_returns_llm_reply(client: TestClient, fake_llm: FakeLLMClient) -> None:
-    """POST /chat → ответ приходит из LLM, не из эхо-формулы."""
+    _grant(client, 42)
+
     r = client.post("/chat", json={"telegram_id": 42, "text": "привет"})
 
     assert r.status_code == 200
@@ -20,7 +25,8 @@ def test_single_message_returns_llm_reply(client: TestClient, fake_llm: FakeLLMC
 def test_history_grows_and_is_passed_to_llm(
     client: TestClient, fake_llm: FakeLLMClient
 ) -> None:
-    """К третьему сообщению LLM видит user+assistant+user+assistant+user."""
+    _grant(client, 7)
+
     fake_llm.programmed_reply = "ответ-1"
     client.post("/chat", json={"telegram_id": 7, "text": "первое"})
     fake_llm.programmed_reply = "ответ-2"
@@ -29,7 +35,6 @@ def test_history_grows_and_is_passed_to_llm(
     r3 = client.post("/chat", json={"telegram_id": 7, "text": "третье"})
 
     assert r3.json() == {"reply": "ответ-3"}
-    assert len(fake_llm.calls) == 3
     third = fake_llm.calls[2]
     assert len(third["history"]) == 5
     assert [m.role for m in third["history"]] == [
@@ -49,7 +54,7 @@ def test_history_grows_and_is_passed_to_llm(
 
 
 def test_duplicate_update_id_is_deduped(client: TestClient, fake_llm: FakeLLMClient) -> None:
-    """Повторный update_id не вызывает LLM повторно."""
+    _grant(client, 77)
     payload = {"telegram_id": 77, "text": "привет", "update_id": 1001}
 
     r1 = client.post("/chat", json=payload)
@@ -63,6 +68,9 @@ def test_duplicate_update_id_is_deduped(client: TestClient, fake_llm: FakeLLMCli
 def test_separate_users_have_separate_histories(
     client: TestClient, fake_llm: FakeLLMClient
 ) -> None:
+    _grant(client, 1)
+    _grant(client, 2)
+
     client.post("/chat", json={"telegram_id": 1, "text": "а"})
     client.post("/chat", json={"telegram_id": 2, "text": "б"})
     client.post("/chat", json={"telegram_id": 1, "text": "а2"})

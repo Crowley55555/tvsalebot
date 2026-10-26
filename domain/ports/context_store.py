@@ -18,3 +18,14 @@ class ContextStore(Protocol):
         Нужен для дедупа повторных Telegram update_id (long-poll retry).
         """
         ...
+
+    async def grant_consent(self, telegram_id: int, policy_version: str) -> None:
+        """Записать факт согласия пользователя с политикой ПДн.
+
+        Повторный вызов идемпотентен — перезаписывает той же версией.
+        """
+        ...
+
+    async def has_consent(self, telegram_id: int) -> bool:
+        """Проверить, есть ли у пользователя действующее согласие."""
+        ...

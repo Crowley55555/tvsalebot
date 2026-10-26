@@ -19,6 +19,7 @@ class InMemoryContextStore:
     def __init__(self) -> None:
         self._history: dict[str, list[Message]] = {}
         self._seen_updates: set[int] = set()
+        self._consents: dict[int, str] = {}
 
     async def append_message(self, session_key: str, msg: Message) -> None:
         self._history.setdefault(session_key, []).append(msg)
@@ -39,6 +40,13 @@ class InMemoryContextStore:
             return False
         self._seen_updates.add(update_id)
         return True
+
+    async def grant_consent(self, telegram_id: int, policy_version: str) -> None:
+        # Повторный вызов идемпотентен — перезаписываем ту же версию.
+        self._consents[telegram_id] = policy_version
+
+    async def has_consent(self, telegram_id: int) -> bool:
+        return telegram_id in self._consents
 
     async def close(self) -> None:
         # В памяти закрывать нечего — симметрия с RedisContextStore.

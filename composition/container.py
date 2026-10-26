@@ -3,6 +3,7 @@ from pathlib import Path
 
 from composition.env import AppSettings
 from domain.ports import ContextStore, LLMClient
+from features.consent import ConsentService
 from features.dialog import DialogService
 from infrastructure.context import build_context_store
 from infrastructure.llm import build_llm_client
@@ -18,6 +19,7 @@ class Container:
     settings: AppSettings
     context_store: ContextStore
     llm_client: LLMClient
+    consent_service: ConsentService
     dialog_service: DialogService
 
     async def aclose(self) -> None:
@@ -30,10 +32,14 @@ class Container:
 def build_container(settings: AppSettings) -> Container:
     context_store = build_context_store(settings)
     llm_client = build_llm_client(settings)
+    consent_service = ConsentService(
+        store=context_store, policy_version=settings.POLICY_VERSION
+    )
     system_prompt = _load_system_prompt(settings.PROMPTS_DIR)
     dialog_service = DialogService(
         store=context_store,
         llm=llm_client,
+        consent=consent_service,
         system_prompt=system_prompt,
         max_history_messages=settings.MAX_HISTORY_MESSAGES,
     )
@@ -41,5 +47,6 @@ def build_container(settings: AppSettings) -> Container:
         settings=settings,
         context_store=context_store,
         llm_client=llm_client,
+        consent_service=consent_service,
         dialog_service=dialog_service,
     )

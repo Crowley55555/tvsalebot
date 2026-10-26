@@ -4,7 +4,8 @@ from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.types import Message
 
-from bot.core_api_client import CoreAPIClient, CoreAPIError
+from bot.core_api_client import ConsentRequiredFromAPI, CoreAPIClient, CoreAPIError
+from bot.keyboards import consent_keyboard
 
 log = logging.getLogger("bot.handlers.text")
 
@@ -23,6 +24,11 @@ async def on_text(message: Message, core_api_client: CoreAPIClient) -> None:
             text=message.text,
             update_id=message.message_id,
         )
+    except ConsentRequiredFromAPI as exc:
+        await message.answer(
+            exc.user_message, reply_markup=consent_keyboard(exc.policy_url)
+        )
+        return
     except CoreAPIError as exc:
         log.error(
             "core_api_error telegram_id=%s status=%s detail=%s",

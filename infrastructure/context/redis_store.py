@@ -10,7 +10,7 @@ import redis.asyncio as aioredis
 
 from domain.entities import Message
 
-from .keys import dialog_history_key, update_seen_key
+from .keys import consent_key, dialog_history_key, update_seen_key
 
 
 class RedisContextStore:
@@ -55,6 +55,19 @@ class RedisContextStore:
         # и None, если ключ уже существовал. Приводим к bool через `bool(...)`.
         result = await self._r.set(key, "1", ex=ttl_s, nx=True)
         return bool(result)
+
+    async def grant_consent(self, telegram_id: int, policy_version: str) -> None:
+        """Записать факт согласия пользователя с политикой ПДн.
+
+        TTL совпадает с историей диалога (`self._ttl_s`): пока активна
+        сессия пользователя — активно и его согласие. Повторный вызов
+        идемпотентен (SET перезаписывает значение той же версией).
+        """
+        await self._r.set(consent_key(telegram_id), policy_version, ex=self._ttl_s)
+
+    async def has_consent(self, telegram_id: int) -> bool:
+        """Проверить, есть ли у пользователя действующее согласие."""
+        return await self._r.exists(consent_key(telegram_id)) > 0
 
     async def close(self) -> None:
         """Закрыть пул соединений Redis."""

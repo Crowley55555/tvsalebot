@@ -37,6 +37,8 @@ async def _main() -> None:
 
     dp = build_dispatcher()
     dp["core_api_client"] = core_api_client
+    dp["prompts_dir"] = settings.PROMPTS_DIR
+    dp["policy_url"] = settings.PRIVACY_POLICY_URL
 
     try:
         log.info("bot_started env=%s core_api=%s", settings.ENVIRONMENT, settings.CORE_API_URL)

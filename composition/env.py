@@ -32,6 +32,9 @@ class AppSettings(BaseSettings):
     PROMPTS_DIR: Path = Path("prompts")
     MAX_HISTORY_MESSAGES: int = 30
 
+    POLICY_VERSION: str = "v1-2026-10-26"
+    PRIVACY_POLICY_URL: str = "https://example.com/privacy"
+
 
 @lru_cache
 def get_settings() -> AppSettings:

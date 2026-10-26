@@ -20,3 +20,12 @@ def dialog_history_key(session_key: str) -> str:
 def update_seen_key(update_id: int) -> str:
     """Ключ идемпотентности Telegram update_id (дедуп long-poll ретраев)."""
     return f"idempotency:update:{update_id}"
+
+
+def consent_key(telegram_id: int) -> str:
+    """Ключ факта согласия пользователя с политикой ПДн.
+
+    Значение — строка `policy_version` (например, `v1-2026-10-26`).
+    Формат зафиксирован в plans/2026-10-26-f7-consent-gate.md.
+    """
+    return f"consent:{telegram_id}"
