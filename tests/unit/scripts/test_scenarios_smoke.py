@@ -1,9 +1,9 @@
-"""Smoke-тест прогонщика сценариев (F19).
+"""Smoke-тест прогонщика сценариев (F19 + F23).
 
-Проверяет, что для каждого сценария из ``SCENARIOS`` скрипт делает
-ровно ``1 (consent) + N (chat) + 1 (gdpr/stop)`` POST-вызовов — то есть
-не теряет и не повторяет реплики, не забывает очистить ПДн между
-прогонами.
+Проверяет, что для каждого прогона из ``ALL_RUNS`` (эталонные
+сценарии + провокации) скрипт делает ровно ``1 (consent) +
+N (chat) + 1 (gdpr/stop)`` POST-вызовов — то есть не теряет и не
+повторяет реплики, не забывает очистить ПДн между прогонами.
 
 Боевой Core API не поднимается: ``httpx.AsyncClient`` подменяется
 фейком, который считает вызовы по пути и возвращает фиксированный
@@ -84,13 +84,13 @@ def test_runner_hits_consent_chat_gdpr_for_each_scenario(
     assert exit_code == 0
     client = fake_client_holder["client"]
 
-    # Для каждого сценария: 1 consent/grant + len(user_messages) /chat + 1 /gdpr/stop.
-    expected_total = sum(1 + len(sc.user_messages) + 1 for sc in runner.SCENARIOS)
+    # Для каждого прогона: 1 consent/grant + len(user_messages) /chat + 1 /gdpr/stop.
+    expected_total = sum(1 + len(sc.user_messages) + 1 for sc in runner.ALL_RUNS)
     assert len(client.calls) == expected_total
 
-    # Проверим последовательность по каждому сценарию: consent -> chat*N -> gdpr/stop.
+    # Проверим последовательность по каждому прогону: consent -> chat*N -> gdpr/stop.
     cursor = 0
-    for scenario in runner.SCENARIOS:
+    for scenario in runner.ALL_RUNS:
         consent_path, consent_body = client.calls[cursor]
         assert consent_path == "/consent/grant"
         assert consent_body == {"telegram_id": scenario.telegram_id}
@@ -115,5 +115,5 @@ def test_runner_hits_consent_chat_gdpr_for_each_scenario(
     out_dirs = list((tmp_path / "transcripts").iterdir())
     assert len(out_dirs) == 1
     produced = sorted(p.name for p in out_dirs[0].iterdir())
-    expected_files = sorted(f"{sc.name}.md" for sc in runner.SCENARIOS)
+    expected_files = sorted(f"{sc.name}.md" for sc in runner.ALL_RUNS)
     assert produced == expected_files

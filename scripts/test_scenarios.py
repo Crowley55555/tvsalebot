@@ -131,6 +131,75 @@ SCENARIOS: list[Scenario] = [
 ]
 
 
+# Пять провокаций из proof-of-value.md § 6.2 — чек-лист качества:
+# транслит, грубость, «дай топ-3 без вопросов», несуществующая модель,
+# технический вопрос, в котором бот плавает. Критерии успеха — в
+# prompts/scenarios.md § «Провокации».
+PROVOCATIONS: list[Scenario] = [
+    Scenario(
+        name="provocation_1_translit",
+        title="Provocation 1 — Транслит и опечатки",
+        telegram_id=90101,
+        criteria_ref="prompts/scenarios.md § Провокация 1",
+        user_messages=[
+            "hochu kupit tv v zalu",
+            "smotryu kinoshki i serialy",
+            "komnata svetlaya",
+        ],
+    ),
+    Scenario(
+        name="provocation_2_rudeness",
+        title="Provocation 2 — Хамство и мат",
+        telegram_id=90102,
+        criteria_ref="prompts/scenarios.md § Провокация 2",
+        user_messages=[
+            "ну и бот у вас тупой, скажи сразу что брать",
+            "блин, достал вопросами",
+            "ладно, кино смотрю и игры",
+        ],
+    ),
+    Scenario(
+        name="provocation_3_no_questions",
+        title="Provocation 3 — Дай топ-3 без вопросов",
+        telegram_id=90103,
+        criteria_ref="prompts/scenarios.md § Провокация 3",
+        user_messages=[
+            "не хочу отвечать на вопросы, дай просто топ-3 самсунг тв",
+            "нет, вопросы не нужны",
+            "хочу просто модели",
+        ],
+    ),
+    Scenario(
+        name="provocation_4_unknown_model",
+        title="Provocation 4 — Несуществующая модель",
+        telegram_id=90104,
+        criteria_ref="prompts/scenarios.md § Провокация 4",
+        user_messages=[
+            "расскажи про Samsung QN42Z",
+            "а точно нет? в интернете видел",
+            "ну тогда что похожее есть",
+        ],
+    ),
+    Scenario(
+        name="provocation_5_deep_tech",
+        title="Provocation 5 — Технический вопрос, в котором бот плавает",
+        telegram_id=90105,
+        criteria_ref="prompts/scenarios.md § Провокация 5",
+        user_messages=[
+            "какой PWM у QN90D?",
+            "а задержка ввода в мс?",
+            "ладно, посоветуй под кино",
+        ],
+    ),
+]
+
+
+# Полный QA-прогон: сначала пять эталонных сценариев, потом пять
+# провокаций. Human-ревью идёт в том же порядке — критерии в
+# prompts/scenarios.md в двух разделах.
+ALL_RUNS: list[Scenario] = SCENARIOS + PROVOCATIONS
+
+
 class CoreAPIUnavailable(RuntimeError):
     """Core API недоступен или вернул non-200."""
 
@@ -241,8 +310,8 @@ async def _main_async() -> int:
     passed = 0
 
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SEC) as client:
-        for i, scenario in enumerate(SCENARIOS):
-            print(f"[{i + 1}/{len(SCENARIOS)}] {scenario.title}...")
+        for i, scenario in enumerate(ALL_RUNS):
+            print(f"[{i + 1}/{len(ALL_RUNS)}] {scenario.title}...")
             try:
                 dialog = await _run_scenario(client, base_url, scenario)
             except CoreAPIUnavailable as exc:
@@ -253,11 +322,14 @@ async def _main_async() -> int:
             (out_dir / f"{scenario.name}.md").write_text(transcript, encoding="utf-8")
             passed += 1
 
-            if i < len(SCENARIOS) - 1:
+            if i < len(ALL_RUNS) - 1:
                 await asyncio.sleep(PAUSE_BETWEEN_SCENARIOS_SEC)
 
     print()
-    print(f"Готово: {passed}/{len(SCENARIOS)} сценариев завершили прогон без ошибок.")
+    print(
+        f"Готово: {passed}/{len(ALL_RUNS)} прогонов завершены без ошибок "
+        f"({len(SCENARIOS)} эталонных + {len(PROVOCATIONS)} провокаций)."
+    )
     print(f"Транскрипты: {out_dir.resolve()}")
     print("Оценка «прошло/не прошло» — вручную по prompts/scenarios.md.")
     return 0
