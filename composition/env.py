@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,24 @@ class AppSettings(BaseSettings):
 
     POLICY_VERSION: str = "v1-2026-10-26"
     PRIVACY_POLICY_URL: str = "https://example.com/privacy"
+
+    @model_validator(mode="after")
+    def _enforce_prod_llm_provider(self) -> "AppSettings":
+        """Страховка под П7-б: в prod разрешены только РФ-провайдеры.
+
+        Текущий Literal уже эквивалентен {"gigachat"}, валидатор добавлен
+        «на вырост» — чтобы расширение Literal до {"gigachat", "yandex"}
+        не открыло случайно доступ зарубежным провайдерам в проде.
+        """
+        if self.ENVIRONMENT == "prod" and self.LLM_PROVIDER not in {
+            "gigachat",
+            "yandex",
+        }:
+            raise ValueError(
+                f"В prod разрешены только LLM_PROVIDER=gigachat или yandex; "
+                f"получено: {self.LLM_PROVIDER!r} (ФЗ-152, П7-б)"
+            )
+        return self
 
 
 @lru_cache

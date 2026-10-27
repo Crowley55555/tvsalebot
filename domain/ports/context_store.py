@@ -6,6 +6,10 @@ DeletionReason = Literal["user_stop", "user_delete", "retention", "admin"]
 
 
 class ContextStore(Protocol):
+    async def ping(self) -> None:
+        """Проверка живости хранилища. Бросает при недоступности."""
+        ...
+
     async def append_message(self, session_key: str, msg: Message) -> None: ...
 
     async def get_history_length(self, session_key: str) -> int: ...

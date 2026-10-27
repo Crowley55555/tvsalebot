@@ -1,0 +1,25 @@
+[Unit]
+Description=tvsalebot Telegram bot (aiogram 3)
+After=network-online.target tvsalebot-api.service
+Wants=network-online.target
+Requires=tvsalebot-api.service
+
+[Service]
+Type=simple
+User=tvsalebot
+Group=tvsalebot
+WorkingDirectory=/opt/tvsalebot
+EnvironmentFile=/etc/tvsalebot/.env
+ExecStart=/opt/tvsalebot/.venv/bin/python -m bot.main
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/tvsalebot
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -17,6 +17,10 @@ class InMemoryContextStore:
         self._consents: dict[int, str] = {}
         self._deletion_log: list[dict[str, Any]] = []
 
+    async def ping(self) -> None:
+        """In-memory хранилище всегда живо."""
+        return None
+
     async def append_message(self, session_key: str, msg: Message) -> None:
         self._history.setdefault(session_key, []).append(msg)
 

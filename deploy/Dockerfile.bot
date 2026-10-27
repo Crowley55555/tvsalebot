@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1.6
+# Telegram-бот (aiogram 3) — NL-контур, HTTP-клиент к Core API.
+# Правило П3: контейнер не содержит api/, не поднимает FastAPI.
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
+COPY pyproject.toml README.md LICENSE ./
+RUN pip install --no-cache-dir .
+
+# Код бота + его зависимости по пакетам
+COPY bot/ ./bot/
+COPY composition/ ./composition/
+COPY domain/ ./domain/
+COPY features/ ./features/
+COPY infrastructure/ ./infrastructure/
+COPY prompts/ ./prompts/
+
+USER app
+
+CMD ["python", "-m", "bot.main"]

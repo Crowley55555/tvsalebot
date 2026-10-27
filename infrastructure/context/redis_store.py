@@ -33,6 +33,10 @@ class RedisContextStore:
         )
         self._ttl_s: int = ttl_s
 
+    async def ping(self) -> None:
+        """Проверить живость Redis. Бросает `ConnectionError` при недоступности."""
+        await self._r.ping()
+
     async def append_message(self, session_key: str, msg: Message) -> None:
         key = dialog_history_key(session_key)
         payload = msg.model_dump_json()

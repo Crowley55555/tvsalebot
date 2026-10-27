@@ -1,0 +1,55 @@
+# Секреты и приватный контекст (П7-а, П7-г)
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+.business/
+cp/
+kp/
+
+# Приватные транскрипты и чаты
+transcripts/
+
+# Git и редакторы
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Процесс и артефакты разработки
+.claude/
+.starter/
+plans/
+retrospectives/
+
+# Докеры контента (не нужны в образе Core/бота)
+idea/
+architecture/
+landing/
+screenshots/
+
+# Тесты и dev-инструменты (не нужны в проде)
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Кэши Python и логи
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# OS-мусор
+.DS_Store
+Thumbs.db
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Сам deploy-каталог не копируем внутрь образа
+deploy/

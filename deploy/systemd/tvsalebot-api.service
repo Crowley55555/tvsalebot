@@ -1,0 +1,26 @@
+[Unit]
+Description=tvsalebot Core API (FastAPI/Uvicorn)
+After=network-online.target redis-server.service
+Wants=network-online.target redis-server.service
+
+[Service]
+Type=simple
+User=tvsalebot
+Group=tvsalebot
+WorkingDirectory=/opt/tvsalebot
+EnvironmentFile=/etc/tvsalebot/.env
+ExecStart=/opt/tvsalebot/.venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+# Жёсткие ограничения прав файловой системы.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/tvsalebot
+# Логи — в journald, не в файл (журнал меньше рискует с ПДн).
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

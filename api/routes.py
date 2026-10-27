@@ -4,7 +4,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from api.deps import get_consent_service, get_deletion_service, get_dialog_service
+from api.deps import (
+    get_consent_service,
+    get_container,
+    get_deletion_service,
+    get_dialog_service,
+)
 from api.schemas import (
     ChatRequest,
     ChatResponse,
@@ -14,6 +19,7 @@ from api.schemas import (
     GdprStopRequest,
     GdprStopResponse,
 )
+from composition.container import Container
 from domain import ConsentRequired
 from features.consent import ConsentService
 from features.deletion import DeletionService
@@ -22,6 +28,28 @@ from features.dialog import DialogService
 log = logging.getLogger("api.routes")
 
 router = APIRouter()
+
+
+@router.get("/health")
+async def health(
+    container: Annotated[Container, Depends(get_container)],
+) -> Response:
+    """Публичный health-check: проверяет живость Redis через порт ContextStore.
+
+    Не требует консента, не читает ПДн — публичная ручка для UptimeRobot/compose.
+    """
+    try:
+        await container.context_store.ping()
+    except Exception as exc:
+        log.warning("health_redis_down: %s", exc)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "degraded", "redis": "unreachable"},
+        )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"status": "ok", "redis": "ok"},
+    )
 
 
 @router.post("/chat")

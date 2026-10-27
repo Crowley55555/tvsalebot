@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1.6
+# Core API (FastAPI + Uvicorn) — РФ-контур.
+# Правила П1/П2/П3 соблюдены: контейнер содержит prompts/, адаптеры и фичи,
+# но не содержит bot/ (отдельный образ).
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# non-root пользователь
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
+# Сначала — только манифесты, чтобы слой с зависимостями кешировался.
+COPY pyproject.toml README.md LICENSE ./
+RUN pip install --no-cache-dir .
+
+# Код приложения
+COPY api/ ./api/
+COPY composition/ ./composition/
+COPY domain/ ./domain/
+COPY features/ ./features/
+COPY infrastructure/ ./infrastructure/
+COPY prompts/ ./prompts/
+
+USER app
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,97 @@
+# nginx-шаблон для tvsalebot на РФ-сервере.
+# ПЕРЕД применением:
+#   envsubst '${DOMAIN}' < tvsalebot.conf.template > /etc/nginx/sites-available/tvsalebot.conf
+# или вручную заменить ${DOMAIN} на реальный домен.
+#
+# SSL-сертификаты — через certbot (Let's Encrypt), см. deploy/README.md.
+# Лендос (static) — опционально монтируется в /var/www/tvsalebot/landing.
+
+# --- HTTP → HTTPS редирект ---
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # ACME-challenge для certbot
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS ---
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    server_tokens off;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+
+    client_max_body_size 1m;
+
+    # Публичный лендос (одностраничник из landing/)
+    location = / {
+        root /var/www/tvsalebot/landing;
+        try_files /index.html =404;
+        add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'" always;
+    }
+
+    # Страница политики ПДн (ФЗ-152)
+    location /privacy {
+        root /var/www/tvsalebot/landing;
+        try_files $uri $uri/ /privacy.html =404;
+    }
+
+    # Статика лендоса
+    location /assets/ {
+        root /var/www/tvsalebot/landing;
+        try_files $uri =404;
+        expires 7d;
+    }
+
+    # Health-check для UptimeRobot — публичная ручка, без ПДн.
+    location = /health {
+        proxy_pass http://127.0.0.1:8000/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        access_log off;
+    }
+
+    # Core API — внутренние ручки за bearer-токеном (/chat, /consent/grant, /gdpr/stop).
+    # Публикуем под /api/, чтобы корень оставался за лендосом.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 5s;
+    }
+}

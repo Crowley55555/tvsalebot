@@ -1,0 +1,70 @@
+# tvsalebot — локальный/прод compose для РФ-контура.
+# На NL-сервере поднимается ТОЛЬКО сервис `bot` отдельным compose/systemd:
+# он ходит в Core API по CORE_API_URL (не по имени контейнера `api`).
+#
+# Все секреты — только через переменные окружения из `.env` рядом.
+# `.env` в репо не коммитится (см. .gitignore и П7-а).
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Если REDIS_PASSWORD задан — Redis запускается с requirepass.
+    command: >
+      sh -c 'if [ -n "$${REDIS_PASSWORD}" ]; then
+               exec redis-server --requirepass "$${REDIS_PASSWORD}";
+             else
+               exec redis-server;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Переопределяем REDIS_URL, чтобы ходил в соседний сервис, а не в localhost.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    ports:
+      # Пробрасываем наружу только для локальной отладки.
+      # На проде за nginx — закомментируй или оставь только 127.0.0.1:8000:8000.
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; \ntry:\n  urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\nexcept Exception as e:\n  print('healthcheck failed:', e); sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.bot
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CORE_API_URL: ${CORE_API_URL:-http://api:8000}
+
+volumes:
+  redis-data:
+    name: tvsalebot-redis-data
