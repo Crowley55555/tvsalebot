@@ -48,6 +48,25 @@ curl -s http://127.0.0.1:8000/health
 Остановить: `docker compose -f deploy/docker-compose.yml down`.
 Полный сброс Redis: `docker compose -f deploy/docker-compose.yml down -v` (запрещено на проде — удалит данные пользователей!).
 
+## Compose-переменные окружения
+
+### `API_BIND` — на каком интерфейсе слушает Core API
+
+Управляет биндингом порта 8000 у сервиса `api` (`ports: "${API_BIND:-127.0.0.1}:8000:8000"`).
+
+- **По умолчанию `127.0.0.1`** — api слушает только localhost. Безопасно для локального запуска и для прод-инстансов, где перед api стоит nginx на том же хосте.
+- **`API_BIND=0.0.0.0`** — api слушает на всех интерфейсах. Нужно, если к api должен обращаться другой сервер (у нас: bot на NL-сервере ходит в Core API на РФ-сервере по публичному IP). При этом **обязательно** закрыть порт 8000 на firewall (ufw/iptables), оставив доступ только с нужных IP, — иначе api окажется в открытом интернете без TLS и без авторизации на уровне сети.
+
+Пример для РФ-сервера, где bot на NL ходит в api напрямую:
+```bash
+# в /opt/tvsalebot/.env
+API_BIND=0.0.0.0
+
+# и обязательно firewall (пример для ufw):
+sudo ufw allow from <IP-NL-сервера> to any port 8000 proto tcp
+sudo ufw deny 8000/tcp
+```
+
 ## Деплой на VPS — вариант A (docker compose)
 
 Шаги на свежей Ubuntu 22.04:
@@ -145,5 +164,5 @@ sudo nginx -t && sudo systemctl reload nginx
 - [ ] `REDIS_PASSWORD` не пустой, ≥32 символов.
 - [ ] `CORE_API_BEARER_TOKEN` не пустой, тот же — в `.env` бота.
 - [ ] `curl -s https://<domain>/health` → `{"status":"ok","redis":"ok"}`.
-- [ ] Firewall: наружу открыты только 22, 80, 443. Порт 8000 — только `127.0.0.1`.
+- [ ] Firewall: наружу открыты только 22, 80, 443. Порт 8000 — только `127.0.0.1`, ИЛИ `0.0.0.0` при корректно настроенном ufw-whitelist на IP вызывающего сервера (см. раздел `API_BIND`).
 - [ ] UptimeRobot мониторит `/health` раз в 5 мин.

@@ -35,15 +35,16 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - path: .env
+      - path: ../.env
         required: false
     environment:
       # Переопределяем REDIS_URL, чтобы ходил в соседний сервис, а не в localhost.
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     ports:
-      # Пробрасываем наружу только для локальной отладки.
-      # На проде за nginx — закомментируй или оставь только 127.0.0.1:8000:8000.
-      - "127.0.0.1:8000:8000"
+      # Пробрасываем наружу. По умолчанию только localhost — безопасно для локалки и прод-инстансов с nginx на том же хосте.
+      # Если api должен быть доступен с другого сервера (например, bot на NL ходит в api на РФ) — выставить API_BIND=0.0.0.0 в .env
+      # и обязательно закрыть порт 8000 на firewall (ufw/iptables), оставив доступ только нужным IP.
+      - "${API_BIND:-127.0.0.1}:8000:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; \ntry:\n  urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\nexcept Exception as e:\n  print('healthcheck failed:', e); sys.exit(1)"]
       interval: 15s
@@ -60,7 +61,7 @@ services:
       api:
         condition: service_healthy
     env_file:
-      - path: .env
+      - path: ../.env
         required: false
     environment:
       CORE_API_URL: ${CORE_API_URL:-http://api:8000}
