@@ -4,6 +4,7 @@ from pathlib import Path
 from aiogram import Router
 from aiogram.enums import ChatType
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.keyboards import consent_keyboard
@@ -23,6 +24,10 @@ def _load_greeting(prompts_dir: Path) -> str:
 
 
 @router.message(CommandStart(), lambda m: m.chat.type == ChatType.PRIVATE)
-async def on_start(message: Message, prompts_dir: Path, policy_url: str) -> None:
+async def on_start(
+    message: Message, prompts_dir: Path, policy_url: str, state: FSMContext
+) -> None:
+    # Сбрасываем FSM-воронку: /start может прилететь посреди диалога.
+    await state.clear()
     greeting = _load_greeting(prompts_dir)
     await message.answer(greeting, reply_markup=consent_keyboard(policy_url))

@@ -3,16 +3,12 @@ import re
 
 from aiogram import F, Router
 from aiogram.enums import ChatType
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 
 from bot.core_api_client import ConsentRequiredFromAPI, CoreAPIClient, CoreAPIError
-from bot.keyboards import (
-    budget_keyboard,
-    consent_keyboard,
-    console_keyboard,
-    light_keyboard,
-    scenario_keyboard,
-)
+from bot.keyboards import consent_keyboard, keyboard_for_state
+from bot.states import FunnelState
 
 log = logging.getLogger("bot.handlers.text")
 
@@ -30,41 +26,29 @@ def _sanitize_markdown(text: str) -> str:
     return text
 
 
-_SCENARIO_RE = re.compile(
-    r"кино.*спорт.*игр|что.*планируете смотреть|основ(ное|ной).*(назнач|сценар)",
-    re.IGNORECASE,
-)
-_LIGHT_RE = re.compile(
-    r"освещ[её]н|светл|полумрак|насколько.*свет", re.IGNORECASE
-)
-_BUDGET_RE = re.compile(
-    r"бюджет|ориентир.*(по )?цене|какая.*сумм", re.IGNORECASE
-)
-_CONSOLE_RE = re.compile(r"PS5|приставк|консол", re.IGNORECASE)
-_DISTANCE_RE = re.compile(
-    r"метров?.*(от )?дивана|расстояни.*экран", re.IGNORECASE
-)
-
-
-def _pick_funnel_keyboard(reply: str) -> InlineKeyboardMarkup | None:
-    # Расстояние — свободный ввод (кнопок не прилепляем).
-    if _DISTANCE_RE.search(reply):
+def _state_name_short(state_full: str | None) -> str | None:
+    """«FunnelState:AWAIT_LIGHT» → «AWAIT_LIGHT». None/без ':' → None."""
+    if state_full is None:
         return None
-    if _SCENARIO_RE.search(reply):
-        return scenario_keyboard()
-    if _LIGHT_RE.search(reply):
-        return light_keyboard()
-    if _BUDGET_RE.search(reply):
-        return budget_keyboard()
-    if _CONSOLE_RE.search(reply):
-        return console_keyboard()
-    return None
+    _, _, tail = state_full.partition(":")
+    return tail or None
 
 
 @router.message(F.chat.type == ChatType.PRIVATE, F.text)
-async def on_text(message: Message, core_api_client: CoreAPIClient) -> None:
+async def on_text(
+    message: Message, core_api_client: CoreAPIClient, state: FSMContext
+) -> None:
     if message.from_user is None or message.text is None:
         return
+
+    current = await state.get_state()
+    if current == FunnelState.AWAIT_DISTANCE.state:
+        # Единственный шаг воронки со свободным вводом — расстояние в метрах.
+        await state.update_data(distance=message.text)
+        await state.set_state(FunnelState.AWAIT_BUDGET)
+    # На других шагах воронки state не трогаем: клиент пишет текстом, LLM отвечает,
+    # клавиатура прицепится по текущему state (клиент может продолжить и кнопкой).
+
     try:
         reply = await core_api_client.chat(
             telegram_id=message.from_user.id,
@@ -90,5 +74,6 @@ async def on_text(message: Message, core_api_client: CoreAPIClient) -> None:
         log.info("empty_reply skip telegram_id=%s", message.from_user.id)
         return
     clean_reply = _sanitize_markdown(reply)
-    funnel_kb = _pick_funnel_keyboard(clean_reply)
-    await message.answer(clean_reply, reply_markup=funnel_kb)
+    new_state = await state.get_state()
+    kb = keyboard_for_state(_state_name_short(new_state))
+    await message.answer(clean_reply, reply_markup=kb)

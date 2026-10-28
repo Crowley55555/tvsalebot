@@ -2,15 +2,21 @@ import contextlib
 import logging
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.core_api_client import CoreAPIClient, CoreAPIError
 from bot.keyboards import (
     CONSENT_CALLBACK_DATA,
+    FUNNEL_BACK_CALLBACK_DATA,
     FUNNEL_CALLBACK_PREFIX,
+    FUNNEL_RESTART_CALLBACK_DATA,
     FUNNEL_VALUES,
+    POST_CONSENT_GREETING,
+    keyboard_for_state,
     scenario_keyboard,
 )
+from bot.states import FunnelState, is_games_scenario, prev_state_of, state_name
 
 log = logging.getLogger("bot.handlers.callback")
 
@@ -18,10 +24,18 @@ router = Router()
 
 _FALLBACK_STORAGE_DOWN = "секунду не могу ответить, попробуй написать ещё раз через минуту"
 
+# Ключ в state.data, который чистим при «⬅ Назад» из соответствующего state.
+_STATE_DATA_KEY: dict[str, str] = {
+    state_name(FunnelState.AWAIT_LIGHT): "light",
+    state_name(FunnelState.AWAIT_DISTANCE): "distance",
+    state_name(FunnelState.AWAIT_BUDGET): "budget",
+    state_name(FunnelState.AWAIT_CONSOLE): "console",
+}
+
 
 @router.callback_query(F.data == CONSENT_CALLBACK_DATA)
 async def on_consent_grant(
-    callback: CallbackQuery, core_api_client: CoreAPIClient
+    callback: CallbackQuery, core_api_client: CoreAPIClient, state: FSMContext
 ) -> None:
     if callback.from_user is None:
         await callback.answer()
@@ -43,18 +57,80 @@ async def on_consent_grant(
         version,
     )
     await callback.answer()
-    if callback.message is not None:
+    await state.set_state(FunnelState.AWAIT_SCENARIO)
+    if isinstance(callback.message, Message):
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.message.answer(
-            "Спасибо! Начнём с главного: что в основном планируете смотреть "
-            "— кино, спорт, игры или фоновый ТВ?",
+            POST_CONSENT_GREETING,
             reply_markup=scenario_keyboard(),
         )
 
 
+@router.callback_query(F.data == FUNNEL_BACK_CALLBACK_DATA)
+async def on_back(callback: CallbackQuery, state: FSMContext) -> None:
+    if callback.from_user is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    current = await state.get_state()
+    # Из AWAIT_SCENARIO/COMPLETED/None назад идти некуда.
+    if current is None or current in (
+        state_name(FunnelState.AWAIT_SCENARIO),
+        state_name(FunnelState.COMPLETED),
+    ):
+        await callback.answer()
+        return
+
+    prev = prev_state_of(current)
+    if prev is None:
+        await callback.answer()
+        return
+
+    # Чистим значение текущего шага, чтобы при повторном выборе оно перезаписалось.
+    data_key = _STATE_DATA_KEY.get(current)
+    if data_key is not None:
+        data = await state.get_data()
+        if data_key in data:
+            data.pop(data_key)
+            await state.set_data(data)
+
+    await state.set_state(prev)
+
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+    from bot.handlers.text import _state_name_short
+
+    kb = keyboard_for_state(_state_name_short(state_name(prev)))
+    await callback.message.answer(
+        "⬅ Можно изменить выбор на предыдущем шаге:",
+        reply_markup=kb,
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == FUNNEL_RESTART_CALLBACK_DATA)
+async def on_restart(callback: CallbackQuery, state: FSMContext) -> None:
+    if callback.from_user is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    await state.clear()
+    await state.set_state(FunnelState.AWAIT_SCENARIO)
+
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+    await callback.message.answer(
+        POST_CONSENT_GREETING,
+        reply_markup=scenario_keyboard(),
+    )
+    await callback.answer()
+
+
 @router.callback_query(F.data.startswith(f"{FUNNEL_CALLBACK_PREFIX}:"))
 async def on_funnel_choice(
-    callback: CallbackQuery, core_api_client: CoreAPIClient
+    callback: CallbackQuery, core_api_client: CoreAPIClient, state: FSMContext
 ) -> None:
     if (
         callback.from_user is None
@@ -70,6 +146,24 @@ async def on_funnel_choice(
         return
 
     value = FUNNEL_VALUES.get((step, code), code)
+
+    # Обновляем FSM ДО вызова /chat, чтобы к ответу прицепить правильную клавиатуру.
+    if step == "scenario":
+        await state.update_data(scenario=value)
+        await state.set_state(FunnelState.AWAIT_LIGHT)
+    elif step == "light":
+        await state.update_data(light=value)
+        await state.set_state(FunnelState.AWAIT_DISTANCE)
+    elif step == "budget":
+        await state.update_data(budget=value)
+        data = await state.get_data()
+        if is_games_scenario(data.get("scenario")):
+            await state.set_state(FunnelState.AWAIT_CONSOLE)
+        else:
+            await state.set_state(FunnelState.COMPLETED)
+    elif step == "console":
+        await state.update_data(console=value)
+        await state.set_state(FunnelState.COMPLETED)
 
     # Эхо-ответ клиента (как будто он написал value текстом) — для прозрачности UX.
     with contextlib.suppress(Exception):
@@ -100,9 +194,9 @@ async def on_funnel_choice(
     if not reply:
         return
 
-    # Используем те же утилиты из text handler.
-    from bot.handlers.text import _pick_funnel_keyboard, _sanitize_markdown
+    from bot.handlers.text import _sanitize_markdown, _state_name_short
 
     clean_reply = _sanitize_markdown(reply)
-    funnel_kb = _pick_funnel_keyboard(clean_reply)
-    await callback.message.answer(clean_reply, reply_markup=funnel_kb)
+    new_state = await state.get_state()
+    kb = keyboard_for_state(_state_name_short(new_state))
+    await callback.message.answer(clean_reply, reply_markup=kb)
