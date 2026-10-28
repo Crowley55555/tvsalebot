@@ -8,6 +8,7 @@ from bot.core_api_client import CoreAPIClient, CoreAPIError
 from bot.keyboards import (
     CONSENT_CALLBACK_DATA,
     FUNNEL_CALLBACK_PREFIX,
+    FUNNEL_VALUES,
     scenario_keyboard,
 )
 
@@ -63,10 +64,12 @@ async def on_funnel_choice(
         await callback.answer()
         return
     try:
-        _, step, value = callback.data.split(":", 2)
+        _, step, code = callback.data.split(":", 2)
     except ValueError:
         await callback.answer()
         return
+
+    value = FUNNEL_VALUES.get((step, code), code)
 
     # Эхо-ответ клиента (как будто он написал value текстом) — для прозрачности UX.
     with contextlib.suppress(Exception):
